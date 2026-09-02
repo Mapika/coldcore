@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: >-
+  If you use coldcore, please cite the software using the metadata
+  below; the preferred citation is the records paper it grew out of.
+title: coldcore
+abstract: >-
+  GPU framework for exhaustive-coverage combinatorial optimization:
+  exact whole-space gain/loss transforms behind a plugin ABI, with a
+  problem-agnostic search core (exact lazy greedy, LNS, notch descent)
+  for covering codes, dominating sets, and related problems.
+type: software
+version: 0.2.1
+date-released: 2026-09-02
+license: MIT
+repository-code: 'https://github.com/Mapika/coldcore'
+authors:
+  - family-names: Marosi
+    given-names: Mark
+    email: marosi@mit.bme.hu
+    orcid: 'https://orcid.org/0009-0002-7203-3533'
+    affiliation: >-
+      Department of Artificial Intelligence and Systems Engineering,
+      Budapest University of Technology and Economics
+keywords:
+  - covering codes
+  - dominating sets
+  - combinatorial optimization
+  - large neighborhood search
+  - CUDA
+  - GPU
+preferred-citation:
+  type: article
+  title: >-
+    New upper and lower bounds on covering codes K_q(n,R) for alphabets
+    of size 5 <= q <= 21
+  authors:
+    - family-names: Marosi
+      given-names: Mark
+      orcid: 'https://orcid.org/0009-0002-7203-3533'
+      affiliation: >-
+        Department of Artificial Intelligence and Systems Engineering,
+        Budapest University of Technology and Economics
+  year: 2026
+  doi: 10.48550/arXiv.2608.19872
+  url: 'https://arxiv.org/abs/2608.19872'
