@@ -1,0 +1,39 @@
+# build artifacts
+build/
+*.so
+*.a
+*.o
+*.obj
+*.cubin
+*.fatbin
+*.ptx
+CMakeCache.txt
+CMakeFiles/
+
+# python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+dist/
+.venv/
+
+# data dumps / large outputs — never commit
+*.npy
+*.npz
+*.bin
+*.dat
+data/
+runs/
+checkpoints/
+logs/
+
+# editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+scratch_symexact/
+
+# private submission checklist (deliberately untracked)
+JOSS_SUBMISSION.md
