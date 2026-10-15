@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coldcore"
+dynamic = ["version"]                     # single source: coldcore.__version__
+description = "GPU combinatorial-optimization framework: exact whole-space gain/loss transforms + LNS record hunting"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = [
+  "covering codes", "combinatorial optimization", "domination",
+  "large neighborhood search", "cuda", "gpu", "coding theory",
+]
+authors = [
+  { name = "Mark Marosi", email = "marosi@mit.bme.hu" },
+]
+maintainers = [
+  { name = "Mark Marosi", email = "marosi@mit.bme.hu" },
+]
+# numpy is the only runtime dependency, on purpose (see CONTRIBUTING.md:
+# ctypes bindings, no pybind11/nanobind). Tested against 1.21 - 2.2.
+dependencies = ["numpy>=1.21"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: GPU :: NVIDIA CUDA",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+lint = ["ruff>=0.6"]
+
+[project.scripts]
+coldcore = "coldcore.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Mapika/coldcore"
+Repository = "https://github.com/Mapika/coldcore"
+Changelog = "https://github.com/Mapika/coldcore/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/Mapika/coldcore/tree/main/docs"
+"Records paper" = "https://arxiv.org/abs/2608.19872"
+
+[tool.setuptools.dynamic]
+version = { attr = "coldcore.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["coldcore*"]
+
+# The distribution is pure Python (py3-none-any): it carries the search
+# core, the CLI and the numpy reference backends, and works on any
+# architecture including aarch64/GH200. The CUDA plugins are *not* built
+# by pip — see docs/getting-started.md ("GPU backends").
+#
+# Heads-up: `pip wheel .` / `python -m build` make setuptools scribble
+# its intermediates into ./build/, which is also the cmake build tree
+# (build/lib/libcoldcore.so vs. build/lib/coldcore/*.py). They coexist,
+# but `rm -rf build` for one purpose wipes the other. Build releases
+# from a clean checkout. (A separate cmake tree, `cmake -B build-cuda`,
+# also works but then COLDCORE_PLUGIN_PATH must point at the .so, since
+# gpu.default_plugin_path() looks in ./build/plugins/.)
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "gpu: requires a CUDA device and a built plugin .so (auto-skipped otherwise)",
+  "bigmem: builds ~10 GiB in-memory tables (auto-skipped below 32 GiB RAM)",
+]
+
+# ---------------------------------------------------------------- lint
+# Deliberately permissive: the rules that catch real defects (pyflakes,
+# pycodestyle errors, obvious modernisations) with no style bikeshedding
+# and no autoformatter. `ruff check .` must be clean on main.
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+extend-exclude = ["build", "paper"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "UP"]
+ignore = [
+  "E702",   # compact `a = 1; b = 2` setup lines are used on purpose in tests
+]
+
+[tool.ruff.lint.per-file-ignores]
+# re-export modules and the protocol's documentation-only numpy import
+"**/__init__.py" = ["F401"]
+"src/coldcore/protocol.py" = ["F401"]

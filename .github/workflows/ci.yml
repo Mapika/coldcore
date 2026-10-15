@@ -1,0 +1,107 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# One CI run per ref: cancel superseded runs on the same branch/PR.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ------------------------------------------------------------------
+  # The suite that must stay green everywhere: pure Python + numpy, the
+  # reference backends, the CLI, and the worked examples. No CUDA, no GPU.
+  # ------------------------------------------------------------------
+  cpu-tests:
+    name: CPU tests (py${{ matrix.python }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      # Installs the package the way a user does. The wheel is pure
+      # Python (py3-none-any), so this is also the aarch64 story: no
+      # compiler, no CUDA, no architecture-specific wheel needed.
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Import from outside the checkout
+        working-directory: ${{ runner.temp }}
+        run: |
+          python -c "import coldcore; print('coldcore', coldcore.__version__)"
+          coldcore --help
+          python -m coldcore --help
+
+      - name: Tests (CPU only)
+        run: python -m pytest tests -v -k "not gpu"
+
+      # CLI smoke on the reference backend: K_2(4,1) = 4, a 16-word space
+      # that solves in well under a second.
+      - name: CLI smoke
+        working-directory: ${{ runner.temp }}
+        run: |
+          coldcore solve --backend ref -p q=2 -p n=4 -p R=1 \
+              --floor 4 --notch-budget 5 --hours 0.02
+
+  # ------------------------------------------------------------------
+  # Lint. Deliberately permissive (see [tool.ruff] in pyproject.toml):
+  # pyflakes + pycodestyle errors + obvious modernisations, no formatter,
+  # no style bikeshedding. Pinned so a ruff release cannot turn main red.
+  # ------------------------------------------------------------------
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install ruff==0.16.4
+      - run: ruff check --output-format=github .
+
+  # ------------------------------------------------------------------
+  # Compile-only CUDA build: proves the headers, the ABI and the plugin
+  # sources still compile for sm_90. No device is present, so nothing is
+  # executed.
+  # ------------------------------------------------------------------
+  cuda-build:
+    name: CUDA compile-only (sm_90, no GPU)
+    runs-on: ubuntu-24.04
+    container: nvidia/cuda:12.4.1-devel-ubuntu22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: apt-get update && apt-get install -y cmake git
+      # the covering plugin kernels are in-tree (src/plugins/covering/), so
+      # the full build compiles here; see VENDORED.md for upstream sync.
+      - run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCOLDCORE_CUDA_ARCHS=90
+      - run: cmake --build build -j 2
+      - run: test -f build/lib/libcoldcore.so
+
+  # ------------------------------------------------------------------
+  # GPU parity tests. GitHub-hosted runners have no CUDA device, so this
+  # job only makes sense on a self-hosted runner attached to the
+  # maintainers' hardware (GH200). Until such a runner is registered the
+  # GPU suite runs manually before release tags (see CONTRIBUTING.md).
+  # To enable: register a runner with the labels below and uncomment.
+  # ------------------------------------------------------------------
+  # gpu-tests:
+  #   name: GPU parity tests (self-hosted)
+  #   runs-on: [self-hosted, linux, arm64, cuda]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - run: python -m pip install -e ".[test]"
+  #     - run: cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j
+  #     - run: python -m pytest tests -v          # includes the gpu marker
